@@ -1,0 +1,159 @@
+/* ── Base ──────────────────────────────────────────────────── */
+body { font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+
+/* ── Stat Cards ────────────────────────────────────────────── */
+.stat-card {
+  border-radius: 0.75rem;
+  border-width: 1px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.stat-num { font-size: 1.875rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat-lbl { font-size: 0.7rem; color: #9ca3af; margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── Inputs ─────────────────────────────────────────────────── */
+.input-field {
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: #f3f4f6;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+.input-field::placeholder { color: #6b7280; }
+.input-field:focus {
+  border-color: transparent;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* ── Chart Cards ────────────────────────────────────────────── */
+.chart-card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+.chart-title { font-size: 0.875rem; font-weight: 600; color: #d1d5db; margin-bottom: 1rem; }
+
+/* ── Table Rows ─────────────────────────────────────────────── */
+#appTable tr { transition: background 0.1s; }
+#appTable tr:hover { background: #111827; }
+#appTable td { padding: 0.75rem 1rem; font-size: 0.875rem; vertical-align: middle; }
+
+/* ── Modal ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 1rem;
+}
+.modal-overlay.hidden { display: none !important; }
+
+.modal-box {
+  background: #111827;
+  border: 1px solid #374151;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+  overflow-y: auto;
+  max-height: 90vh;
+  width: 100%;
+}
+
+/* ── Form ───────────────────────────────────────────────────── */
+.form-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Setup Tabs ─────────────────────────────────────────────── */
+.setup-tab {
+  padding: 0.375rem 1rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #9ca3af;
+  transition: background 0.15s, color 0.15s;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+.setup-tab:hover { color: #fff; }
+.setup-tab.active { background: #374151; color: #fff; }
+
+.setup-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #1f2937;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+.step-num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+/* ── Folder list ────────────────────────────────────────────── */
+.folder-item {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #1f2937;
+  cursor: pointer;
+  color: #d1d5db;
+  transition: background 0.1s, color 0.1s;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder-item:hover { background: #374151; color: #fff; }
+
+/* ── Status dropdown ────────────────────────────────────────── */
+.status-select {
+  background: #1f2937;
+  border: 1px solid #374151;
+  font-size: 0.75rem;
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  color: inherit;
+  outline: none;
+}
+.status-select:focus { box-shadow: 0 0 0 1px #3b82f6; }
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #111827; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+/* ── Toast ──────────────────────────────────────────────────── */
+#toast { transition: opacity 0.3s; }
+
+/* ── Spin animation ─────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }

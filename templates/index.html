@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Application Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css?v={{ ver }}" />
+</head>
+<body class="bg-gray-950 text-gray-100 min-h-screen font-sans">
+
+<!-- ── Top Nav ───────────────────────────────────────────────── -->
+<nav class="bg-gray-900 border-b border-gray-800 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
+  <div class="flex items-center gap-3">
+    <span class="text-2xl">🎯</span>
+    <h1 class="text-lg font-bold tracking-tight text-white">Job Tracker</h1>
+    <span class="text-xs text-gray-500 hidden sm:block">Applications Dashboard</span>
+  </div>
+  <div class="flex items-center gap-3">
+    <span id="lastSyncLabel" class="text-xs text-gray-500"></span>
+    <button onclick="openSetup()" class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 transition">⚙ Setup</button>
+    <button onclick="syncEmails(false)" id="syncBtn"
+      class="text-xs px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold transition flex items-center gap-2">
+      <span id="syncIcon">⟳</span> Sync Emails
+    </button>
+    <button onclick="syncEmails(true)"
+      class="text-xs px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 border border-gray-600 text-gray-300 transition"
+      title="Re-scan all emails from scratch to catch missed rejections/selections">
+      ↺ Full Resync
+    </button>
+    <button onclick="autoAssignResumes()"
+      class="text-xs px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-semibold transition"
+      title="Auto-match resume files to applications by company name">
+      📎 Auto-Assign Resumes
+    </button>
+    <button onclick="openAddModal()"
+      class="text-xs px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition">
+      + Add Manual
+    </button>
+    <!-- User menu -->
+    <div class="flex items-center gap-2 ml-2 pl-3 border-l border-gray-700">
+      <img id="userAvatar" src="" alt="" class="w-7 h-7 rounded-full hidden" />
+      <span id="userName" class="text-xs text-gray-300 hidden sm:block"></span>
+      <a href="/logout" class="text-xs px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 transition">Sign out</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Stats Row ─────────────────────────────────────────────── -->
+<section class="px-6 py-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+  <div class="stat-card bg-blue-950 border-blue-800">
+    <div class="stat-num text-blue-400" id="statToday">–</div>
+    <div class="stat-lbl">Today</div>
+  </div>
+  <div class="stat-card bg-violet-950 border-violet-800">
+    <div class="stat-num text-violet-400" id="statTotal">–</div>
+    <div class="stat-lbl">Total Applied</div>
+  </div>
+  <div class="stat-card bg-amber-950 border-amber-800">
+    <div class="stat-num text-amber-400" id="statPending">–</div>
+    <div class="stat-lbl">Pending</div>
+  </div>
+  <div class="stat-card bg-sky-950 border-sky-800">
+    <div class="stat-num text-sky-400" id="statResponses">–</div>
+    <div class="stat-lbl">Responses</div>
+  </div>
+  <div class="stat-card bg-rose-950 border-rose-800">
+    <div class="stat-num text-rose-400" id="statRejected">–</div>
+    <div class="stat-lbl">Rejected</div>
+  </div>
+  <div class="stat-card bg-emerald-950 border-emerald-800">
+    <div class="stat-num text-emerald-400" id="statOffers">–</div>
+    <div class="stat-lbl">Offers 🎉</div>
+  </div>
+</section>
+
+<!-- ── Filters ───────────────────────────────────────────────── -->
+<section class="px-6 pb-4 flex flex-wrap gap-3 items-center">
+  <input id="searchInput" type="text" placeholder="Search company or title…"
+    class="input-field w-64" oninput="debounceLoad()" />
+  <select id="statusFilter" onchange="loadApplications()" class="input-field w-44">
+    <option value="">All Statuses</option>
+    <option>Applied</option>
+    <option>Under Review</option>
+    <option>Phone Screen</option>
+    <option>Technical Interview</option>
+    <option>Final Interview</option>
+    <option>Offer</option>
+    <option>Rejected</option>
+    <option>Withdrawn</option>
+  </select>
+  <button onclick="clearFilters()" class="text-xs text-gray-400 hover:text-gray-200 underline">Clear</button>
+  <span class="ml-auto text-sm text-gray-400"><span id="appCount">0</span> results</span>
+</section>
+
+<!-- ── Table ─────────────────────────────────────────────────── -->
+<section class="px-6 pb-6">
+  <div class="rounded-xl border border-gray-800 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-gray-900 text-gray-400 uppercase text-xs tracking-wider">
+            <th class="px-4 py-3 text-left">#</th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:text-white" onclick="sortBy('company')">Company ↕</th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:text-white" onclick="sortBy('job_title')">Job Title ↕</th>
+            <th class="px-4 py-3 text-left cursor-pointer hover:text-white" onclick="sortBy('applied_at')">Applied At ↕</th>
+            <th class="px-4 py-3 text-left">Status</th>
+            <th class="px-4 py-3 text-left">Resume Folder</th>
+            <th class="px-4 py-3 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="appTable" class="divide-y divide-gray-800">
+          <tr><td colspan="7" class="text-center py-16 text-gray-500">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── Analytics ─────────────────────────────────────────────── -->
+<section class="px-6 pb-10">
+  <h2 class="text-lg font-bold mb-5 text-gray-200">📊 Analytics</h2>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Daily trend -->
+    <div class="chart-card">
+      <h3 class="chart-title">Applications Per Day (Last 30 Days)</h3>
+      <canvas id="dailyChart" height="200"></canvas>
+    </div>
+    <!-- Status breakdown -->
+    <div class="chart-card flex flex-col items-center">
+      <h3 class="chart-title self-start">Status Breakdown</h3>
+      <div style="width:280px;height:280px">
+        <canvas id="statusChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────────────────────────
+     MODALS
+     ───────────────────────────────────────────────────────────── -->
+
+<!-- Add / Edit Modal -->
+<div id="appModal" class="modal-overlay hidden">
+  <div class="modal-box w-full max-w-lg">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="text-lg font-bold" id="modalTitle">Add Application</h3>
+      <button onclick="closeModal('appModal')" class="text-gray-400 hover:text-white text-xl">✕</button>
+    </div>
+    <form id="appForm" onsubmit="saveApplication(event)" class="space-y-4">
+      <input type="hidden" id="formId" />
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="form-label">Company *</label>
+          <input id="formCompany" type="text" required class="input-field w-full" placeholder="Google" />
+        </div>
+        <div>
+          <label class="form-label">Job Title *</label>
+          <input id="formTitle" type="text" required class="input-field w-full" placeholder="ML Engineer" />
+        </div>
+        <div>
+          <label class="form-label">Location</label>
+          <input id="formLocation" type="text" class="input-field w-full" placeholder="Remote / NYC" />
+        </div>
+        <div>
+          <label class="form-label">Source</label>
+          <select id="formSource" class="input-field w-full">
+            <option value="">Select</option>
+            <option>LinkedIn</option>
+            <option>Indeed</option>
+            <option>Glassdoor</option>
+            <option>Greenhouse</option>
+            <option>Lever</option>
+            <option>Workday</option>
+            <option>Direct/Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Applied At</label>
+          <input id="formAppliedAt" type="datetime-local" class="input-field w-full" />
+        </div>
+        <div>
+          <label class="form-label">Status</label>
+          <select id="formStatus" class="input-field w-full">
+            <option>Applied</option>
+            <option>Under Review</option>
+            <option>Phone Screen</option>
+            <option>Technical Interview</option>
+            <option>Final Interview</option>
+            <option>Offer</option>
+            <option>Rejected</option>
+            <option>Withdrawn</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Resume Folder</label>
+        <div class="flex gap-2">
+          <input id="formResume" type="text" class="input-field flex-1" placeholder="e.g. google_ml_2026" />
+          <button type="button" onclick="openFolderPicker()" class="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-xs text-gray-300 transition">Browse</button>
+        </div>
+      </div>
+      <div>
+        <label class="form-label">Job URL</label>
+        <input id="formUrl" type="url" class="input-field w-full" placeholder="https://…" />
+      </div>
+      <div>
+        <label class="form-label">Notes</label>
+        <textarea id="formNotes" rows="2" class="input-field w-full resize-none" placeholder="Any notes…"></textarea>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button type="button" onclick="closeModal('appModal')" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm transition">Cancel</button>
+        <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Folder Picker Modal -->
+<div id="folderModal" class="modal-overlay hidden">
+  <div class="modal-box w-full max-w-sm">
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="font-bold">Select Resume Folder</h3>
+      <button onclick="closeModal('folderModal')" class="text-gray-400 hover:text-white">✕</button>
+    </div>
+    <input type="text" id="folderSearch" placeholder="Filter folders…" class="input-field w-full mb-3" oninput="filterFolders()" />
+    <div id="folderList" class="max-h-64 overflow-y-auto space-y-1 text-sm"></div>
+  </div>
+</div>
+
+<!-- Setup Modal -->
+<div id="setupModal" class="modal-overlay hidden">
+  <div class="modal-box w-full max-w-2xl">
+    <div class="flex justify-between items-center mb-5">
+      <h3 class="text-lg font-bold">⚙ Setup</h3>
+      <button onclick="closeModal('setupModal')" class="text-gray-400 hover:text-white text-xl">✕</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-6 bg-gray-800 rounded-lg p-1 w-fit">
+      <button onclick="showSetupTab('config')" id="tab-config" class="setup-tab active">Configuration</button>
+      <button onclick="showSetupTab('gmail')" id="tab-gmail" class="setup-tab">Gmail Setup Guide</button>
+    </div>
+
+    <!-- Config tab -->
+    <div id="setup-config">
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Resume Root Folder (Windows path)</label>
+          <input id="cfgResume" type="text" class="input-field w-full" placeholder="C:\Users\YourName\Documents\Resumes" />
+          <p class="text-xs text-gray-500 mt-1">All your tailored resume subfolders should be inside this folder.</p>
+        </div>
+        <div>
+          <label class="form-label">Sync Days Back (on first sync)</label>
+          <input id="cfgDays" type="number" min="1" max="365" class="input-field w-32" placeholder="90" />
+          <p class="text-xs text-gray-500 mt-1">How many days of past emails to scan on first sync.</p>
+        </div>
+        <div class="flex items-center gap-3 mt-2">
+          <div class="flex items-center gap-2 text-sm">
+            <span id="credIcon" class="text-xl">⏳</span>
+            <span id="credText" class="text-gray-400">Checking credentials…</span>
+          </div>
+        </div>
+        <button onclick="saveConfig()" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-sm font-semibold transition">Save Configuration</button>
+      </div>
+    </div>
+
+    <!-- Gmail guide tab -->
+    <div id="setup-gmail" class="hidden space-y-4 text-sm text-gray-300 leading-relaxed">
+      <div class="bg-amber-950 border border-amber-800 rounded-lg p-3 text-amber-300 text-xs">
+        You only need to do this once. After setup, emails are parsed automatically.
+      </div>
+      <ol class="space-y-3 list-none">
+        <li class="setup-step"><span class="step-num">1</span>
+          Go to <strong>console.cloud.google.com</strong> → Create a new project (e.g. "JobTracker")
+        </li>
+        <li class="setup-step"><span class="step-num">2</span>
+          In the project, search for <strong>Gmail API</strong> and click <strong>Enable</strong>
+        </li>
+        <li class="setup-step"><span class="step-num">3</span>
+          Go to <strong>APIs &amp; Services → Credentials → Create Credentials → OAuth client ID</strong>
+        </li>
+        <li class="setup-step"><span class="step-num">4</span>
+          Choose <strong>Desktop app</strong> as the application type → Create
+        </li>
+        <li class="setup-step"><span class="step-num">5</span>
+          Click <strong>Download JSON</strong> — rename it to <code class="bg-gray-800 px-1 rounded">credentials.json</code>
+        </li>
+        <li class="setup-step"><span class="step-num">6</span>
+          Place <code class="bg-gray-800 px-1 rounded">credentials.json</code> in the
+          <code class="bg-gray-800 px-1 rounded">job-tracker\</code> folder (same folder as <code class="bg-gray-800 px-1 rounded">app.py</code>)
+        </li>
+        <li class="setup-step"><span class="step-num">7</span>
+          Click <strong>Sync Emails</strong> — a browser window will open to authenticate with Google (one-time).
+          After that, syncing is fully automatic.
+        </li>
+      </ol>
+      <div class="bg-gray-800 rounded-lg p-3 text-xs text-gray-400">
+        <strong class="text-gray-200">Privacy note:</strong> credentials are stored locally on your PC.
+        Only your Gmail labels/subjects are read — no email content is sent anywhere.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 z-50 hidden">
+  <div id="toastInner" class="px-5 py-3 rounded-xl shadow-xl text-sm font-medium text-white"></div>
+</div>
+
+<script src="/static/js/dashboard.js?v={{ ver }}"></script>
+</body>
+</html>
